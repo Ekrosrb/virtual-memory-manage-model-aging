@@ -14,14 +14,7 @@ public class VirtualPage extends Page {
     private boolean modify;
     private Long physicalPageNumber;
 
+    private boolean inFs;
     private long priority;
-
-    public VirtualPage(long pageNumber){
-        this.pageNumber = pageNumber;
-        present = false;
-        reference = false;
-        modify = false;
-        physicalPageNumber = null;
-    }
 
 }

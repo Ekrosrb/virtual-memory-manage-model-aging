@@ -2,6 +2,7 @@ package model.processor;
 
 import lombok.Getter;
 import model.Log;
+import model.OS;
 import model.PrintUtils;
 import model.memory.MemoryManager;
 import model.memory.pages.VirtualPage;
@@ -19,7 +20,7 @@ public class Processor {
 
     private final Deque<Process> processList;
     private long id;
-    private static final int QUANTUM = 4;
+    private static final int QUANTUM = 2;
 
     public Processor(long physicalMemoryPages) {
         id = 0;
@@ -28,10 +29,14 @@ public class Processor {
     }
 
     public void addProcess(int time, int pages) {
-        Log.info(PROCESSOR, "Add process: " + time + "/" + pages + " time/pages");
+        Log.info(PROCESSOR, "Add process " + id + "  " + time + "/" + pages + " time/pages");
         List<VirtualPage> virtualPages = Stream.generate(VirtualPage::new).limit(pages).collect(Collectors.toList());
         processList.addLast(new Process(id++, time, virtualPages));
         memoryManager.getVirtualMemory().addPages(virtualPages);
+
+        OS.COUNTER.incProcessCount();
+        OS.COUNTER.setMaxVirtualMemorySize(memoryManager.getVirtualMemory().getMemory().size());
+
     }
 
     public void execute() {
@@ -54,14 +59,19 @@ public class Processor {
     }
 
     private void executeProcess(Process process){
+
+        Log.info(PROCESSOR, "Execute process " + process.getId());
+
         for(int i = 0; i < QUANTUM && process.getTime() > 0; i++){
             process.decTime();
-            VirtualPage page = process.getRandomPage();
+            List<VirtualPage> pages = process.getRandomPages();
 
-            Log.info(PROCESSOR, "Execute process " + process.getId() +
-                    ". Using " + page.getPageNumber() + " page.");
+            pages.forEach(page -> {
+                Log.info(PROCESS, "Using " + page.getPageNumber() +
+                        " page. Active pages - " + process.getActive().size());
+                memoryManager.execute(page, process.isModify());
+            });
 
-            memoryManager.execute(page, process.isModify());
         }
     }
 

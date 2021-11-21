@@ -15,7 +15,7 @@ public class PrintUtils {
         Log.info(OUT_TAG, "№    PPN  P    R    M    Aging");
         memoryManager.getVirtualMemory().getMemory().forEach(page -> {
             String sb = format(page.getPageNumber(), size) +
-                    format(page.isPresent() ? page.getPhysicalPageNumber() : "X", size) +
+                    format(page.isPresent() ? page.getPhysicalPageNumber() : page.isInFs() ? "FS" : "X", size) +
                     format(page.isPresent(), size) +
                     format(page.isReference(), size) +
                     format(page.isModify(), size) +

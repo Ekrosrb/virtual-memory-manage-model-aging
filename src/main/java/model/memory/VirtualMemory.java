@@ -2,7 +2,6 @@ package model.memory;
 
 import lombok.Getter;
 import model.Log;
-import model.memory.pages.Page;
 import model.memory.pages.VirtualPage;
 
 import java.util.ArrayList;
@@ -19,17 +18,9 @@ public class VirtualMemory {
         memory = new ArrayList<>();
     }
 
-    public long getSize() {
-        return memory.size()*Page.SIZE;
-    }
-
-    public List<VirtualPage> getPresentPages(){
-        return memory.stream().filter(VirtualPage::isPresent).collect(Collectors.toList());
-    }
-
     public void addPages(List<VirtualPage> pages){
         List<Long> numbers = Stream.iterate(0L, x -> x + 1L)
-                .limit(memory.size() + pages.size())
+                .limit((long) memory.size() + pages.size())
                 .filter(x -> memory.stream().noneMatch(page -> page.getPageNumber() == x))
                 .limit(pages.size()).collect(Collectors.toList());
 

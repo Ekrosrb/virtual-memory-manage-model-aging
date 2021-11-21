@@ -2,6 +2,9 @@ package model.memory;
 
 import lombok.Getter;
 import model.Log;
+import model.OS;
+import model.PrintUtils;
+import model.Utils;
 import model.memory.pages.PhysicalPage;
 import model.memory.pages.VirtualPage;
 
@@ -27,8 +30,10 @@ public class MemoryManager {
     public void execute(VirtualPage virtualPage, boolean isModify){
 
         if(!virtualPage.isPresent()){
-            Log.info(MEMORY_MANAGER, "Page fault!");
+            Log.info(MEMORY_MANAGER, "|X|Page fault|X|");
             bestPhysical(virtualPage);
+
+            OS.COUNTER.incPageFault();
         }
         if(!virtualPage.isReference()) {
             virtualPage.setReference(true);
@@ -46,8 +51,12 @@ public class MemoryManager {
                 : writeToFS(virtualMemory.getMemory().stream().filter(VirtualPage::isPresent)
                 .min(Comparator.comparingLong(VirtualPage::getPriority)).orElseThrow());
 
+        Log.info(AGING, "Set physical page " + number
+                + " to virtual page " + virtualPage.getPageNumber());
+
         virtualPage.setPhysicalPageNumber(number);
         virtualPage.setPresent(true);
+        virtualPage.setInFs(false);
     }
 
     public void updateReference(){
@@ -56,22 +65,30 @@ public class MemoryManager {
                 .filter(VirtualPage::isPresent)
                 .filter(VirtualPage::isReference)
                 .collect(Collectors.toList())
-                .forEach(page -> page.setReference(((int) (Math.random() * 3)) == 1));
-        Log.info(BACKGROUND_PROCESS, "Update R bit.");
+                .forEach(page -> page.setReference(Utils.rand(0, 3) != 1));
+        Log.info(BACKGROUND_PROCESS, "Update references");
     }
 
     private Long writeToFS(VirtualPage page){
-        Log.info(MEMORY_MANAGER, "Write " + page.getPageNumber() + " to FS.");
+
+        Log.info(AGING, "Write " + page.getPageNumber() + " to FS. Page PPN - "
+                + page.getPhysicalPageNumber() + " Page aging - "
+                + PrintUtils.formatBinary16(Long.toBinaryString(page.getPriority())));
+
+        OS.COUNTER.incWriteToFSCount();
+
         Long ppn = page.getPhysicalPageNumber();
         page.setPhysicalPageNumber(null);
         page.setPresent(false);
         page.setReference(false);
         page.setModify(false);
+        page.setInFs(true);
         page.setPriority(0L);
         return ppn;
     }
 
     public void update(){
+        Log.info(AGING, "Update aging");
         virtualMemory.getMemory().forEach(page->{
             if(page.isPresent()){
                 page.setPriority((page.getPriority() >> 1) + (page.isReference() ? LAST_BIT: 0));
