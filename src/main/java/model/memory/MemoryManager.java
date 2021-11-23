@@ -19,18 +19,20 @@ import static model.Log.LogType.*;
 public class MemoryManager {
 
     private final PhysicalMemory physicalMemory;
-    private final VirtualMemory virtualMemory = new VirtualMemory();
+    private final VirtualMemory virtualMemory;
 
     private static final long LAST_BIT = 32768;
 
     public MemoryManager(long physicalMemoryPages){
         physicalMemory = new PhysicalMemory(physicalMemoryPages);
+        virtualMemory = new VirtualMemory();
     }
 
     public void execute(VirtualPage virtualPage, boolean isModify){
-
+        PrintUtils.saveMemoryStatusInFile(this);
         if(!virtualPage.isPresent()){
             Log.info(MEMORY_MANAGER, "|X|Page fault|X|");
+            PrintUtils.saveMessageInFile("|X|Page fault|X|");
             bestPhysical(virtualPage);
 
             OS.COUNTER.incPageFault();
@@ -51,8 +53,11 @@ public class MemoryManager {
                 : writeToFS(virtualMemory.getMemory().stream().filter(VirtualPage::isPresent)
                 .min(Comparator.comparingLong(VirtualPage::getPriority)).orElseThrow());
 
-        Log.info(AGING, "Set physical page " + number
-                + " to virtual page " + virtualPage.getPageNumber());
+        String log = "Set physical page " + number
+                + " to virtual page " + virtualPage.getPageNumber();
+
+        Log.info(AGING, log);
+        PrintUtils.saveMessageInFile(log);
 
         virtualPage.setPhysicalPageNumber(number);
         virtualPage.setPresent(true);
@@ -71,9 +76,13 @@ public class MemoryManager {
 
     private Long writeToFS(VirtualPage page){
 
-        Log.info(AGING, "Write " + page.getPageNumber() + " to FS. Page PPN - "
+        String logMessage = "Write " + page.getPageNumber() + " to FS. Page PPN - "
                 + page.getPhysicalPageNumber() + " Page aging - "
-                + PrintUtils.formatBinary16(Long.toBinaryString(page.getPriority())));
+                + PrintUtils.formatBinary16(Long.toBinaryString(page.getPriority()));
+
+        PrintUtils.saveMessageInFile(logMessage);
+
+        Log.info(AGING, logMessage);
 
         OS.COUNTER.incWriteToFSCount();
 
@@ -96,7 +105,7 @@ public class MemoryManager {
         });
     }
 
-    private List<PhysicalPage> getFree(){
+    public List<PhysicalPage> getFree(){
        return physicalMemory.getMemory().stream()
                .filter(pPage -> virtualMemory.getMemory().stream()
                        .noneMatch(vPage -> Objects.equals(vPage.getPhysicalPageNumber(), pPage.getPageNumber())))

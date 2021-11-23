@@ -7,7 +7,6 @@ import model.memory.pages.VirtualPage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Getter
 public class Process {
@@ -32,12 +31,6 @@ public class Process {
             active.add(pages.get(0));
         }
 
-    }
-
-    public List<VirtualPage> getRandomPages(){
-        return Stream.iterate(0, x -> x + 1).limit(2)
-                .map(x -> getRandomPage())
-                .collect(Collectors.toList());
     }
 
     public VirtualPage getRandomPage() {

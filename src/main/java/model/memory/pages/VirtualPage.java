@@ -16,5 +16,4 @@ public class VirtualPage extends Page {
 
     private boolean inFs;
     private long priority;
-
 }

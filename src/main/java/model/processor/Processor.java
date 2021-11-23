@@ -4,6 +4,7 @@ import lombok.Getter;
 import model.Log;
 import model.OS;
 import model.PrintUtils;
+import model.Utils;
 import model.memory.MemoryManager;
 import model.memory.pages.VirtualPage;
 
@@ -20,16 +21,20 @@ public class Processor {
 
     private final Deque<Process> processList;
     private long id;
-    private static final int QUANTUM = 2;
+    public static int tact = 0;
+    private final int quantum;
 
-    public Processor(long physicalMemoryPages) {
+    public Processor(long physicalMemoryPages, int quantum) {
         id = 0;
+        this.quantum = quantum;
         processList = new LinkedList<>();
         memoryManager = new MemoryManager(physicalMemoryPages);
     }
 
     public void addProcess(int time, int pages) {
-        Log.info(PROCESSOR, "Add process " + id + "  " + time + "/" + pages + " time/pages");
+        String log = "Add process " + id + "  " + time + "/" + pages + " time/pages";
+        Log.info(PROCESSOR, log);
+        PrintUtils.saveMessageInFile(log);
         List<VirtualPage> virtualPages = Stream.generate(VirtualPage::new).limit(pages).collect(Collectors.toList());
         processList.addLast(new Process(id++, time, virtualPages));
         memoryManager.getVirtualMemory().addPages(virtualPages);
@@ -62,23 +67,26 @@ public class Processor {
 
         Log.info(PROCESSOR, "Execute process " + process.getId());
 
-        for(int i = 0; i < QUANTUM && process.getTime() > 0; i++){
+        for(int i = 0; i < quantum && process.getTime() > 0; i++, Processor.tact++){
             process.decTime();
-            List<VirtualPage> pages = process.getRandomPages();
-
-            pages.forEach(page -> {
+                VirtualPage page = process.getRandomPage();
                 Log.info(PROCESS, "Using " + page.getPageNumber() +
                         " page. Active pages - " + process.getActive().size());
                 memoryManager.execute(page, process.isModify());
-            });
-
         }
     }
 
     private void finishProcesses(List<Process> processes) {
-        processes.forEach(process -> memoryManager.removePages(process.getPages()));
+        if(processes.isEmpty()){
+            return;
+        }
+        processes.forEach(process -> {
+            memoryManager.removePages(process.getPages());
+            String log = "Finish process " + process.getId();
+            Log.info(PROCESSOR, log);
+            PrintUtils.saveMessageInFile(log);
+        });
         processList.removeAll(processes);
-        Log.info(PROCESSOR, "Finished " + processes.size() + " processes.");
     }
 
 
